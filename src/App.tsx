@@ -1,8 +1,41 @@
 import React, { ChangeEvent, Fragment, useState } from "react";
 import "./App.css";
 import { Card } from "./interfaces/card";
-import { utilitySetItem, utilityFormFieldsValidation } from "./utilities";
+import {
+  utilitySetItem,
+  utilityFormFieldsValidation,
+  utilityEmailValidation,
+} from "./utilities";
 import styled from "styled-components";
+import { Users } from "./interfaces/users";
+
+const FormLogin = styled.form(() => ({
+  fontSize: "16px",
+  width: "16em",
+  margin: "auto",
+  textAlign: "center",
+  border: "0.07em solid black",
+  marginTop: "2em",
+  borderRadius: "1em"
+}))
+
+const FormAdd = FormLogin;
+
+const Login = styled.button(() => ({
+  width: "30%",
+  textTransform: "uppercase",
+  outline: 0,
+  cursor: "pointer",
+  border: "0.07em solid black",
+  padding: "0.3em",
+  background: "#46A15B",
+  color: "white",
+  filter: "brightness(0.95)",
+  marginBottom: "1em",
+  marginTop: "0.7em"
+}))
+
+const Add = Login;
 
 const DivCard = styled.div(() => ({
   height: "25em",
@@ -33,7 +66,7 @@ const DivContainer = styled.div(() => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  flexFlow: 'row wrap'
+  flexFlow: "row wrap",
 }));
 
 const Favorite = styled.div(() => ({
@@ -43,18 +76,29 @@ const Favorite = styled.div(() => ({
 function App() {
   // variabili localStorage
   const cachedCards = localStorage.getItem("cards");
+  const cachedEmail = localStorage.getItem("email");
+  const cachedUsersString = localStorage.getItem("users");
+  const cachedUsers: Users = !!cachedUsersString
+    ? JSON.parse(cachedUsersString)
+    : {};
 
   // variabili di stato
   const [isHome, setHome] = useState<boolean>(true);
   const [cards, setCards] = useState<Card[]>(
     !!cachedCards ? JSON.parse(cachedCards) : []
   );
+  const [isLogged, setIsLogged] = useState<boolean>(!!cachedEmail);
+  const [inputEmail, setInputEmail] = useState<string>(
+    !!cachedEmail ? cachedEmail : ""
+  );
+  const [users, setUsers] = useState<Users>(cachedUsers);
 
   // variabili di controllo forms
   const [title, setTitle] = useState<string>("");
   const [img, setImg] = useState<string>("");
   const [isTitleValid, setTitleValid] = useState<boolean>(false);
   const [isImgValid, setImgValid] = useState<boolean>(false);
+  const [isEmailValid, setEmailValid] = useState<boolean>(false);
 
   // funzioni
   function onChangeTitle(event: ChangeEvent<HTMLInputElement>) {
@@ -94,11 +138,11 @@ function App() {
         {
           title: title,
           img: img,
-          isFavorite: false,
+          author: inputEmail,
         },
       ];
       setCards(newCards);
-      utilitySetItem(newCards);
+      utilitySetItem(newCards, "cards");
     }
   }
 
@@ -119,23 +163,80 @@ function App() {
   }
 
   function onClickAddFavorite(index: number) {
-    const newCards: Card[] = [...cards];
-    newCards[index] = {
-      ...cards[index],
-      isFavorite: true,
-    };
-    setCards(newCards);
-    utilitySetItem(newCards);
+    if(!!users[inputEmail]){
+      const newFavorites: Card[] = [...users[inputEmail].favorites];
+      newFavorites.push(cards[index]);
+      const newUsers = {
+        ...users,
+        [inputEmail]: {
+          ...users[inputEmail],
+          favorites: newFavorites
+        }
+      };
+      setUsers(newUsers);
+      utilitySetItem(newUsers, "users");
+    } else {
+      console.error('User non trovato');
+    }
   }
 
   function onClickRemoveFavorite(index: number) {
-    const newCards: Card[] = [...cards];
-    newCards[index] = {
-      ...cards[index],
-      isFavorite: false,
-    };
-    setCards(newCards);
-    utilitySetItem(newCards);
+    if(!!users[inputEmail]){
+      const newFavorites: Card[] = [...users[inputEmail].favorites];
+      const indexToRemove = newFavorites.findIndex((el) => {
+        return el.title == cards[index].title;
+      })
+      newFavorites.splice(indexToRemove, 1);
+      const newUsers = {
+        ...users,
+        [inputEmail]: {
+          ...users[inputEmail],
+          favorites: newFavorites
+        }
+      };
+      setUsers(newUsers);
+      utilitySetItem(newUsers, "users");
+    } else {
+      console.error('User non trovato');
+    }
+  }
+
+  function onClickLogout() {
+    const confermaUscita = () => {
+      const conferma = window.confirm("Sei sicuro di voler uscire?");
+      return conferma;
+    }
+
+    if(confermaUscita()){
+      setIsLogged(false);
+      setEmailValid(false);
+      localStorage.removeItem("email");
+      setInputEmail("");
+    }
+  }
+
+  function onClickLogin() {
+    setIsLogged(true);
+    utilitySetItem(inputEmail);
+    if (!users[inputEmail]) {
+      const newUsers = {
+        ...users,
+        [inputEmail]: {
+          favorites: []
+        },
+      };
+      setUsers(newUsers);
+      utilitySetItem(newUsers, "users");
+    }
+  }
+
+  function onChangeEmail(event: any) {
+    if (utilityEmailValidation(event.target.value)) {
+      setEmailValid(true);
+    } else {
+      setEmailValid(false);
+    }
+    setInputEmail(event.target.value);
   }
 
   // componenti
@@ -145,8 +246,9 @@ function App() {
         <DivCard key={index}>
           <ImgCard src={card.img}></ImgCard>
           <TitleCard>{card.title}</TitleCard>
+          <p>{card.author}</p>
           <Favorite>
-            {card.isFavorite ? (
+            {users[inputEmail] && users[inputEmail].favorites.includes(card) ? (
               <span
                 className="material-symbols-outlined"
                 id="favorite"
@@ -166,13 +268,19 @@ function App() {
         </DivCard>
       );
     } else {
-      if (card.isFavorite) {
+      if (users[inputEmail] && users[inputEmail].favorites.includes(card)) {
         return (
           <DivCard key={index}>
             <ImgCard src={card.img}></ImgCard>
             <TitleCard>{card.title}</TitleCard>
+            <p>{card.author}</p>
             <Favorite>
-              <span className="material-symbols-outlined" onClick={() => onClickRemoveFavorite(index)}>heart_minus</span>
+              <span
+                className="material-symbols-outlined"
+                onClick={() => onClickRemoveFavorite(index)}
+              >
+                heart_minus
+              </span>
             </Favorite>
           </DivCard>
         );
@@ -200,31 +308,52 @@ function App() {
   return (
     <>
       <header>
-        <button onClick={onClickHomePage}>Home</button>
-        <button onClick={onClickPreferitiPage}>Preferiti</button>
+        <button onClick={onClickHomePage} disabled={!isLogged}>
+          Home
+        </button>
+        <button onClick={onClickPreferitiPage} disabled={!isLogged}>
+          Preferiti
+        </button>
+        <button onClick={onClickLogout} id="logout" disabled={!isLogged}>
+          Logout
+        </button>
       </header>
-      {isHome ? (
-        <Fragment>
-          <form>
-            <input
-              placeholder="Titolo"
-              value={title}
-              onChange={onChangeTitle}
-            />
-            <input
-              placeholder="Url dell'immagine"
-              value={img}
-              onChange={onChangeImg}
-            />
-            <button onClick={onClickCreateCard} disabled={formNotValid()}>
-              Crea
-            </button>
-          </form>
-          <Home />
-        </Fragment>
+      {isLogged ? (
+        isHome ? (
+          <Fragment>
+            <FormAdd>
+              <input
+                placeholder="Titolo"
+                value={title}
+                onChange={onChangeTitle}
+              />
+              <input
+                placeholder="Url dell'immagine"
+                value={img}
+                onChange={onChangeImg}
+              />
+              <Add onClick={onClickCreateCard} disabled={formNotValid()}>
+                Crea
+              </Add>
+            </FormAdd>
+            <Home />
+          </Fragment>
+        ) : (
+          <Preferiti />
+        )
       ) : (
-        <Preferiti />
+        <FormLogin>
+          <input
+            placeholder="Inserisci email"
+            value={inputEmail}
+            onChange={onChangeEmail}
+          />
+          <Login onClick={onClickLogin} disabled={!isEmailValid} id="login">
+            Login
+          </Login>
+        </FormLogin>
       )}
+
     </>
   );
 }

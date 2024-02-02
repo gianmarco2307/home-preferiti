@@ -15,7 +15,7 @@ input {
 header {
   height: 4em;
   display: flex;
-  background-color: rgb(197, 134, 134);
+  background-color: rgb(75, 73, 73);
   align-items: center;
   justify-content: center;
 }
@@ -25,10 +25,25 @@ header button {
   border: none;
   background-color: transparent;
   padding: 0.4em;
+  color: white;
 }
 
 header button:hover {
-  border: 0.07em solid black;
+  border: 0.07em solid white;
+}
+
+header button:disabled {
+  border: none;
+}
+
+#logout:hover {
+  background-color: red;
+  border: 0.07em solid white;
+}
+
+#logout:disabled {
+  border: none;
+  background-color: transparent;
 }
 
 .material-symbols-outlined {
