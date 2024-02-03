@@ -92,6 +92,9 @@ function App() {
     !!cachedEmail ? cachedEmail : ""
   );
   const [users, setUsers] = useState<Users>(cachedUsers);
+  const [favorites, setFavorites] = useState<string[]>(
+    !!users[inputEmail] ? users[inputEmail].favorites : []
+  );
 
   // variabili di controllo forms
   const [title, setTitle] = useState<string>("");
@@ -164,8 +167,8 @@ function App() {
 
   function onClickAddFavorite(index: number) {
     if(!!users[inputEmail]){
-      const newFavorites: Card[] = [...users[inputEmail].favorites];
-      newFavorites.push(cards[index]);
+      const newFavorites: string[] = [...users[inputEmail].favorites];
+      newFavorites.push(cards[index].title);
       const newUsers = {
         ...users,
         [inputEmail]: {
@@ -173,6 +176,7 @@ function App() {
           favorites: newFavorites
         }
       };
+      setFavorites(newFavorites);
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
     } else {
@@ -182,9 +186,9 @@ function App() {
 
   function onClickRemoveFavorite(index: number) {
     if(!!users[inputEmail]){
-      const newFavorites: Card[] = [...users[inputEmail].favorites];
+      const newFavorites: string[] = [...users[inputEmail].favorites];
       const indexToRemove = newFavorites.findIndex((el) => {
-        return el.title == cards[index].title;
+        return el == cards[index].title;
       })
       newFavorites.splice(indexToRemove, 1);
       const newUsers = {
@@ -194,6 +198,7 @@ function App() {
           favorites: newFavorites
         }
       };
+      setFavorites(newFavorites);
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
     } else {
@@ -208,6 +213,7 @@ function App() {
     }
 
     if(confermaUscita()){
+      setFavorites([]);
       setIsLogged(false);
       setEmailValid(false);
       localStorage.removeItem("email");
@@ -228,6 +234,7 @@ function App() {
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
     }
+    setFavorites(users[inputEmail].favorites);
   }
 
   function onChangeEmail(event: any) {
@@ -248,7 +255,7 @@ function App() {
           <TitleCard>{card.title}</TitleCard>
           <p>{card.author}</p>
           <Favorite>
-            {users[inputEmail] && users[inputEmail].favorites.includes(card) ? (
+            {favorites.includes(card.title) ? (
               <span
                 className="material-symbols-outlined"
                 id="favorite"
@@ -268,7 +275,7 @@ function App() {
         </DivCard>
       );
     } else {
-      if (users[inputEmail] && users[inputEmail].favorites.includes(card)) {
+      if (favorites.includes(card.title)) {
         return (
           <DivCard key={index}>
             <ImgCard src={card.img}></ImgCard>
