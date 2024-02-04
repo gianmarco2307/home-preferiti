@@ -6,8 +6,9 @@ import {
   utilityFormFieldsValidation,
   utilityEmailValidation,
 } from "./utilities";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { Users } from "./interfaces/users";
+import { Message } from "./interfaces/Message";
 
 const FormLogin = styled.form(() => ({
   fontSize: "16px",
@@ -16,8 +17,8 @@ const FormLogin = styled.form(() => ({
   textAlign: "center",
   border: "0.07em solid black",
   marginTop: "2em",
-  borderRadius: "1em"
-}))
+  borderRadius: "1em",
+}));
 
 const FormAdd = FormLogin;
 
@@ -32,14 +33,14 @@ const Login = styled.button(() => ({
   color: "white",
   filter: "brightness(0.95)",
   marginBottom: "1em",
-  marginTop: "0.7em"
-}))
+  marginTop: "0.7em",
+}));
 
 const Add = Login;
 
 const DivCard = styled.div(() => ({
-  height: "25em",
-  width: "15em",
+  height: "34em",
+  width: "18em",
   fontSize: "16px",
   border: "0.1em solid black",
   borderRadius: "1.5em",
@@ -48,7 +49,7 @@ const DivCard = styled.div(() => ({
 }));
 
 const TitleCard = styled.p(() => ({
-  height: "3em",
+  height: "2em",
   width: "96%",
   marginLeft: "auto",
   marginRight: "auto",
@@ -57,10 +58,37 @@ const TitleCard = styled.p(() => ({
   fontWeight: "800",
 }));
 
+const DescriptionCard = styled.p(() => ({
+  height: "5em",
+  width: "94%",
+  marginLeft: "auto",
+  marginRight: "auto",
+  fontSize: "15px",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  textAlign: "justify",
+}));
+
 const ImgCard = styled.img(() => ({
   width: "100%",
   borderRadius: "1.5em 1.5em 0 0",
 }));
+
+const AuthorCard = styled.p(() => ({
+  fontSize: "14px",
+}));
+
+const DateCard = styled.p(() => ({
+  fontSize: "12px",
+}));
+
+const CommentsCard = styled.a(() => ({
+  margin: "auto",
+  textDecoration: "none",
+  color: "black",
+}));
+
+const FavoriteCard = CommentsCard;
 
 const DivContainer = styled.div(() => ({
   display: "flex",
@@ -69,8 +97,62 @@ const DivContainer = styled.div(() => ({
   flexFlow: "row wrap",
 }));
 
-const Favorite = styled.div(() => ({
+const BottomSection = styled.div(() => ({
+  display: "flex",
+  justifyContent: "space-around",
+}));
+
+const DivComments = styled.div<{ $myMessage?: boolean }>`
+  background-color: rgb(75, 73, 73);
+  color: white;
+  border-radius: 20px;
+  border: 2px solid;
+  width: 35em;
+  float: left;
+  margin: 10px auto 10px auto;
+
+  ${(props) =>
+    props.$myMessage &&
+    css`
+      background-color: #4caf50;
+      float: right;
+    `}
+`;
+
+const MessageAuthor = styled.h4(() => ({
+  textAlign: "left",
+  marginLeft: "1.5em",
+}));
+
+const MessageContent = styled.p(() => ({
+  fontSize: "18px",
+  width: "90%",
+  margin: "auto",
+  textAlign: "left",
+}));
+
+const MessagePubDate = styled.h5(() => ({
+  textAlign: "right",
+  marginRight: "1.5em",
+}));
+
+const MessageDelete = styled.button(() => ({
+  fontSize: "16px",
+  border: "0.07em solid red",
+  color: "red",
+  background: "transparent",
   cursor: "pointer",
+  float: "right",
+  marginRight: "1.5em",
+  marginBottom: "1em",
+  opacity: "0.8",
+}));
+
+const DivChat = styled.div(() => ({
+  width: "75%",
+  margin: "auto",
+  display: "flex",
+  flexDirection: "column",
 }));
 
 function App() {
@@ -95,12 +177,17 @@ function App() {
   const [favorites, setFavorites] = useState<string[]>(
     !!users[inputEmail] ? users[inputEmail].favorites : []
   );
+  const [showComments, setShowComments] = useState<boolean>(false);
+  const [CardToShow, setCardToShow] = useState<Card | null>(null);
+  const [message, setMessage] = useState<string>("");
 
   // variabili di controllo forms
   const [title, setTitle] = useState<string>("");
   const [img, setImg] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
   const [isTitleValid, setTitleValid] = useState<boolean>(false);
   const [isImgValid, setImgValid] = useState<boolean>(false);
+  const [isDescriptionValid, setDescriptionValid] = useState<boolean>(false);
   const [isEmailValid, setEmailValid] = useState<boolean>(false);
 
   // funzioni
@@ -122,8 +209,17 @@ function App() {
     setImg(event.target.value);
   }
 
+  function onChangeDescription(event: ChangeEvent<HTMLInputElement>) {
+    if (utilityFormFieldsValidation(event.target.value)) {
+      setDescriptionValid(true);
+    } else {
+      setDescriptionValid(false);
+    }
+    setDescription(event.target.value);
+  }
+
   function formNotValid() {
-    if (isTitleValid && isImgValid) {
+    if (isTitleValid && isImgValid && isDescriptionValid) {
       return false;
     }
     return true;
@@ -142,10 +238,16 @@ function App() {
           title: title,
           img: img,
           author: inputEmail,
+          date: new Date().toLocaleString(),
+          description: description,
+          comments: [],
         },
       ];
       setCards(newCards);
       utilitySetItem(newCards, "cards");
+      setTitle("");
+      setImg("");
+      setDescription("");
     }
   }
 
@@ -166,43 +268,43 @@ function App() {
   }
 
   function onClickAddFavorite(index: number) {
-    if(!!users[inputEmail]){
+    if (!!users[inputEmail]) {
       const newFavorites: string[] = [...users[inputEmail].favorites];
       newFavorites.push(cards[index].title);
       const newUsers = {
         ...users,
         [inputEmail]: {
           ...users[inputEmail],
-          favorites: newFavorites
-        }
+          favorites: newFavorites,
+        },
       };
       setFavorites(newFavorites);
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
     } else {
-      console.error('User non trovato');
+      console.error("User non trovato");
     }
   }
 
   function onClickRemoveFavorite(index: number) {
-    if(!!users[inputEmail]){
+    if (!!users[inputEmail]) {
       const newFavorites: string[] = [...users[inputEmail].favorites];
       const indexToRemove = newFavorites.findIndex((el) => {
-        return el == cards[index].title;
-      })
+        return el === cards[index].title;
+      });
       newFavorites.splice(indexToRemove, 1);
       const newUsers = {
         ...users,
         [inputEmail]: {
           ...users[inputEmail],
-          favorites: newFavorites
-        }
+          favorites: newFavorites,
+        },
       };
       setFavorites(newFavorites);
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
     } else {
-      console.error('User non trovato');
+      console.error("User non trovato");
     }
   }
 
@@ -210,9 +312,9 @@ function App() {
     const confermaUscita = () => {
       const conferma = window.confirm("Sei sicuro di voler uscire?");
       return conferma;
-    }
+    };
 
-    if(confermaUscita()){
+    if (confermaUscita()) {
       setFavorites([]);
       setIsLogged(false);
       setEmailValid(false);
@@ -228,13 +330,14 @@ function App() {
       const newUsers = {
         ...users,
         [inputEmail]: {
-          favorites: []
+          favorites: [],
         },
       };
       setUsers(newUsers);
       utilitySetItem(newUsers, "users");
+    } else {
+      setFavorites(users[inputEmail].favorites);
     }
-    setFavorites(users[inputEmail].favorites);
   }
 
   function onChangeEmail(event: any) {
@@ -246,32 +349,125 @@ function App() {
     setInputEmail(event.target.value);
   }
 
+  function showCommentsSection(index: number) {
+    if (showComments === true) {
+      setCardToShow(cards[index]);
+    } else {
+      setShowComments(true);
+      setCardToShow(cards[index]);
+    }
+  }
+
+  function closeCommentsSection() {
+    setShowComments(false);
+    setCardToShow(null);
+  }
+
+  function onChangeMessage(event: ChangeEvent<HTMLInputElement>) {
+    setMessage(event.target.value);
+  }
+
+  function createMessage() {
+    if (!!CardToShow && !!CardToShow.comments) {
+      const newComments: Message[] = [
+        ...CardToShow.comments,
+        {
+          author: inputEmail,
+          date: new Date().toLocaleString(),
+          content: message,
+        },
+      ];
+      const newCard: Card = {
+        ...CardToShow,
+        comments: newComments,
+      };
+      const newCards: Card[] = cards.map((card) =>
+        card.title === CardToShow.title ? newCard : card
+      );
+      setCards(newCards);
+      utilitySetItem(newCards, "cards");
+      setMessage("");
+    } else {
+      console.error("Errore");
+    }
+  }
+
+  function deleteMsg(index: number) {
+    if (!!CardToShow && !!CardToShow.comments) {
+      const newComments: Message[] = [...CardToShow.comments];
+      newComments.splice(index, 1);
+      const newCard: Card = {
+        ...CardToShow,
+        comments: newComments,
+      };
+      const newCards: Card[] = cards.map((card) =>
+        card.title === CardToShow.title ? newCard : card
+      );
+      setCards(newCards);
+      utilitySetItem(newCards, "cards");
+    } else {
+      console.error("Errore");
+    }
+  }
+
   // componenti
+  function PrintMessage(msg: Message, index: number): JSX.Element {
+    if (msg.author == inputEmail) {
+      return (
+        <DivComments key={index} $myMessage>
+          <MessageAuthor>{msg.author} (TU)</MessageAuthor>
+          <MessageContent>{msg.content}</MessageContent>
+          <MessagePubDate>{msg.date}</MessagePubDate>
+          <MessageDelete onClick={() => deleteMsg(index)}>
+            Elimina
+          </MessageDelete>
+        </DivComments>
+      );
+    }
+    return (
+      <DivComments key={index}>
+        <MessageAuthor>{msg.author}</MessageAuthor>
+        <MessageContent>{msg.content}</MessageContent>
+        <MessagePubDate>{msg.date}</MessagePubDate>
+      </DivComments>
+    );
+  }
+
   function PrintCard(card: Card, index: number): JSX.Element | null {
     if (isHome) {
       return (
         <DivCard key={index}>
           <ImgCard src={card.img}></ImgCard>
           <TitleCard>{card.title}</TitleCard>
-          <p>{card.author}</p>
-          <Favorite>
-            {favorites.includes(card.title) ? (
-              <span
-                className="material-symbols-outlined"
-                id="favorite"
-                onClick={onClickPreferitiPage}
-              >
-                favorite
-              </span>
-            ) : (
-              <span
-                className="material-symbols-outlined"
-                onClick={() => onClickAddFavorite(index)}
-              >
-                heart_plus
-              </span>
-            )}
-          </Favorite>
+          <DescriptionCard>{card.description}</DescriptionCard>
+          <AuthorCard>{card.author}</AuthorCard>
+          <DateCard>{card.date}</DateCard>
+          <BottomSection>
+            <FavoriteCard>
+              {favorites.length >= 1 && favorites.includes(card.title) ? (
+                <span
+                  className="material-symbols-outlined"
+                  id="favorite"
+                  onClick={onClickPreferitiPage}
+                >
+                  favorite
+                </span>
+              ) : (
+                <span
+                  className="material-symbols-outlined"
+                  onClick={() => onClickAddFavorite(index)}
+                >
+                  heart_plus
+                </span>
+              )}
+            </FavoriteCard>
+            <CommentsCard
+              onClick={() => showCommentsSection(index)}
+              href="#comments"
+            >
+              <span className="material-symbols-outlined">chat</span>
+            </CommentsCard>
+          </BottomSection>
         </DivCard>
       );
     } else {
@@ -280,15 +476,17 @@ function App() {
           <DivCard key={index}>
             <ImgCard src={card.img}></ImgCard>
             <TitleCard>{card.title}</TitleCard>
-            <p>{card.author}</p>
-            <Favorite>
+            <DescriptionCard>{card.description}</DescriptionCard>
+            <AuthorCard>{card.author}</AuthorCard>
+            <DateCard>{card.date}</DateCard>
+            <BottomSection>
               <span
                 className="material-symbols-outlined"
                 onClick={() => onClickRemoveFavorite(index)}
               >
                 heart_minus
               </span>
-            </Favorite>
+            </BottomSection>
           </DivCard>
         );
       }
@@ -335,6 +533,11 @@ function App() {
                 onChange={onChangeTitle}
               />
               <input
+                placeholder="Descrizione"
+                value={description}
+                onChange={onChangeDescription}
+              />
+              <input
                 placeholder="Url dell'immagine"
                 value={img}
                 onChange={onChangeImg}
@@ -360,7 +563,37 @@ function App() {
           </Login>
         </FormLogin>
       )}
-
+      {!!showComments ? (
+        <Fragment>
+          <h2 id="comments">Commenti</h2>
+          <span className="material-symbols-outlined" onClick={closeCommentsSection}>close</span>
+          <form>
+            <input
+              placeholder="Nuovo messaggio"
+              value={message}
+              onChange={onChangeMessage}
+            />
+            <button onClick={createMessage} disabled={!message}>
+              Invia
+            </button>
+          </form>
+          {!!CardToShow ? (
+            <DivChat>
+              {!!CardToShow.comments ? (
+                CardToShow.comments.map((msg, index) =>
+                  PrintMessage(msg, index)
+                )
+              ) : (
+                <></>
+              )}
+            </DivChat>
+          ) : (
+            <></>
+          )}
+        </Fragment>
+      ) : (
+        <Fragment></Fragment>
+      )}
     </>
   );
 }
